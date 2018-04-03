@@ -79,11 +79,13 @@ switch model
             intCp_AIF_mM_min(iFrame,1)=(0.5*Cp_AIF_mM(iFrame) + sum(Cp_AIF_mM(1:iFrame-1,1),1)) * (tRes_s/60);
         end
         
-        reg=[Cp_AIF_mM intCp_AIF_mM_min];
-        beta(:,:) = reg \ Ct_mM;
+        reg=[Cp_AIF_mM(opts.NIgnore+1:end,:) intCp_AIF_mM_min(opts.NIgnore+1:end,:)];
+        beta(:,:) = reg \ Ct_mM(opts.NIgnore+1:end,:);
         
         PKP.vP(1,:)=beta(1,:);
         PKP.PS_perMin=beta(2,:);
+        
+        CtModelFit_mM = [ nan(opts.NIgnore,N) ; reg*beta ];
         
 end
 

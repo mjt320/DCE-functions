@@ -17,14 +17,6 @@ NSeries=size(enhancementPct,2);
 S0=1; % this value is generally unknown and doesn't affect enhancement for SPGR
 T2s0_s = 1; % this value is generally unknown and doesn't affect enhancement for SPGR
 
-
-% maxC=8; maxNegC=0.1; minPctInc=2; minAbsInc=0.0001;
-% nMaxPos=log(maxC/minInc)/log(1+pctInc/100);
-% nMaxNeg=log(maxNegC/minInc)/log(1+pctInc/100);
-% CTry_mM=[fliplr(-minInc*(1+pctInc/100).^(1:nMaxNeg)) 0 minInc*(1+pctInc/100).^(1:nMaxPos)]; %calculate enhancement for all trial conc. values and select conc. corresponding to closest enhancement
-% size(CTry_mM)
-
-
 %% calculate concentration values to try
 maxC=8; %maximum concentration
 maxNegC=0.1; %maximum negative concentration
@@ -32,17 +24,11 @@ minPctInc=1; %minimum percent increase from previous value
 minAbsInc=0.0001; %minimum absolute increase from previous value
 CTry_mM=-maxNegC;
 while 1
-    c = CTry_mM(1,end)+max(minAbsInc,(minPctInc/100)*abs(CTry_mM(1,end)));
+    c = CTry_mM(1,end)+max(minAbsInc,(minPctInc/100)*abs(CTry_mM(1,end))); %start at max negative value and increase by pct or abs increment (whichever is greater)
     if c>maxC; break; else
         CTry_mM = [CTry_mM c];
     end
 end
-
-%size(CTry_mM)
-%CTry_mM=[-0.1:0.0001:0.5 0.51:0.01:8.00]; %calculate enhancement for all trial conc. values and select conc. corresponding to closest enhancement
-%CTry_mM=[fliplr(-0.0001*(1+0.01).^[1:700]) 0.0001*(1+0.01).^(1:1135)]; %calculate enhancement for all trial conc. values and select conc. corresponding to closest enhancement
-%CTry_mM=[-0.1:0.00005:0.1 0.1005:0.0005:1 1.005:0.005:8.00]; %calculate enhancement for all trial conc. values and select conc. corresponding to closest enhancement
-
 
 T2s_try_s = ( T2s0_s^-1 + r2s_permMperS * CTry_mM ).^-1; %create row vector of T2s for each test concentration
 
