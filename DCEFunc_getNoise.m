@@ -1,10 +1,13 @@
 function [tNoise,tSNR,tSignal]=DCEFunc_getNoise(signal2D,noiseFrames)
-%signal: array of DCE signals including pre-contrast;  each column
-%represents a different time series (e.g. voxel, ROI)
-%noiseFrames: indices of time frames to use for calculation
-%tNoise2D and tSNR2D: row vector of temporal noise and tSNR values
-%calculate as std and mean/std following detrending
-
+%WORK IN PROGRESS
+%Function to calculate temporal noise level of time series
+%Calculated as std and mean/std following linear detrending of signal
+%INPUT:
+%signal2D: array of signals including baseline signal; each column represents a time series (e.g. voxel, ROI)
+%noiseFrames: indices of time frames to use for noise calculation
+%OUTPUT:
+%tNoise and tSNR: row vectors of temporal noise and tSNR values for each
+%time series
 
 NSignals=size(signal2D,2);
 

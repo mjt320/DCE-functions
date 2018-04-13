@@ -1,4 +1,5 @@
 function slopeFit=DCEFunc_fitLine(tRes_s,signal,opts)
+% WORK IN PROGRESS
 % Fit signal curve using model to get slope
 % Output:
 % slopeFit = struct containing output parameters:

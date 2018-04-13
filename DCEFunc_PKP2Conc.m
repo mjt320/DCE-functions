@@ -1,18 +1,22 @@
 function [Ct_mM,IRF]=DCEFunc_PKP2Conc(tRes_s,Cp_AIF_mM,PKP,model,opts)
 % Calculate tissue concentration curve based on pharmacokinetic parameters
-% Output:
+% for various models (additional models may be added on request). Useful for simulations.
+% OUTPUT:
 % Ct_mM: column vector giving tissue concentration in mM
 % IRF: impulse response function
-% Input:
-% tRes_s = time resolution in seconds
+% INPUT:
+% tRes_s = time resolution of data in seconds
 % Cp_AIF_mM = column vector giving AIF plasma concentration in mM
 % PKP = struct containing PK parameters (vP, vE, PS_perMin, FP_mlPer100gPerMin)
-% model = string to specify model ('Patlak' or '2CXM').
-% opts = struct containing options
+% model = string to specify model:
+%   Patlak
+%   2CXM = two-compartment exchange model
+% opts = struct containing options (not presently used)
 
 N=size(Cp_AIF_mM,1);
 
-%% Calculate discrete IRF depending on model
+
+%% Calculate discrete IRF for specified model
 switch model
     case 'Patlak'
         IRF=PatlakIRF();
@@ -29,9 +33,9 @@ switch model
         error('Model not recognised.');
 end
 
-%% Calculate Ct by convolution
+%% Calculate Ct by convolution of AIF with IRF
 Ct_mM = conv(Cp_AIF_mM.',IRF,'full').';
-Ct_mM = Ct_mM(1:N); % remove extra entries so that Ct is same length as AIF, otherwise we will predict Ct (incorrectly) after acquisition has finished
+Ct_mM = Ct_mM(1:N); % remove extra entries so that Ct is same length as AIF, otherwise we will predict Ct (incorrectly) after acquisition has ended
 
 
 %% Functions to calculate IRF
@@ -39,10 +43,6 @@ Ct_mM = Ct_mM(1:N); % remove extra entries so that Ct is same length as AIF, oth
         IRF=nan(1,N);
         IRF(1)=PKP.vP + (PKP.PS_perMin/2)*(tRes_s/60); % IRF at time zero
         IRF(2:N)=PKP.PS_perMin * (tRes_s/60); % IRF at time zero+t_res, zero+2*t_res, ...
-        
-        %IRF(1)=PKP.vP + (3/4)*(PKP.PS_perMin/2)*(tRes_s/60); % IRF at time zero
-        %IRF(2)=(1/4)*(PKP.PS_perMin/2)*(tRes_s/60) + PKP.PS_perMin * (tRes_s/60); % IRF at time zero
-        %IRF(3:N)=PKP.PS_perMin * (tRes_s/60); % IRF at time zero+t_res, zero+2*t_res, ...
     end
 
     function IRF=IRF2CXM()
@@ -53,7 +53,7 @@ Ct_mM = Ct_mM(1:N); % remove extra entries so that Ct is same length as AIF, oth
         end
     end
 
-%% Functions to calculate exact integral of IRF over any range (needed to convert IRF to a discrete function)
+%% Functions to calculate exact integral of IRF over any range for 2CXM model (needed to convert IRF to a discrete function)
     function IRFInt=IRF2CXMIntegral(t1,t2)
         IRFInt = -(FPos/KP)*(exp(-t2*KP)-exp(-t1*KP)) - (FNeg/KM)*(exp(-t2*KM)-exp(-t1*KM));
     end
