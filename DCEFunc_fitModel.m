@@ -87,6 +87,28 @@ switch model
         
         CtModelFit_mM = [ nan(opts.NIgnore,N) ; reg*beta ];
         
+        case 'PatlakFastExtra' % EXPERIMENTAL!
+        %linear Patlak using Cp and Integral Cp as regressors - vP and K are the regressors
+        %uses matrix divide so should be fast
+        %additional regressors opts.extraRegs also included
+        
+        PKP.vP=nan(1,N);
+        PKP.PS_perMin=nan(1,N);
+        intCp_AIF_mM_min=nan(NTime,1);
+        beta=nan(2+size(opts.extraRegs,2),N);
+        
+        for iFrame=1:NTime %(calculate integral to use as regressor)
+            intCp_AIF_mM_min(iFrame,1)=(0.5*Cp_AIF_mM(iFrame) + sum(Cp_AIF_mM(1:iFrame-1,1),1)) * (tRes_s/60);
+        end
+        
+        reg=[Cp_AIF_mM(opts.NIgnore+1:end,:) intCp_AIF_mM_min(opts.NIgnore+1:end,:) opts.extraRegs(opts.NIgnore+1:end,:)];
+        beta(:,:) = reg \ Ct_mM(opts.NIgnore+1:end,:);
+        
+        PKP.vP(1,:)=beta(1,:);
+        PKP.PS_perMin=beta(2,:);
+        
+        CtModelFit_mM = [ nan(opts.NIgnore,N) ; reg*beta ];
+        
 end
 
 
