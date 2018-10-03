@@ -13,8 +13,8 @@ addpath([procRoot '/software/GitHub/DCE-functions']);
 tRes_s=39.62; %temporal resolution
 NFrames=32; %number of time frames
 FA_deg=15; %SPGR flip angle
-TR_s=0.0034; %SPGR TR
-TE_s=0.0017; %SPGR TE
+TR_s=0.00344; %SPGR TR
+TE_s=0.00168; %SPGR TE
 
 %% Set options
 Hct=0.45; % hematocrit
