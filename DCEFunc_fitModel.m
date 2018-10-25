@@ -95,7 +95,7 @@ switch model %process data using specified model/implementation
         
         CtModelFit_mM = [ nan(opts.NIgnore,N) ; reg*beta ]; % calculate best fit concentration
         
-        case 'PatlakFastExtra' % EXPERIMENTAL!
+    case 'PatlakFastExtra' % EXPERIMENTAL!
         %permits additional non-Patlak regressors in opts.extraRegs
         
         PKP.vP=nan(1,N);

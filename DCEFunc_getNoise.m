@@ -1,6 +1,6 @@
 function [tNoise,tSNR,tSignal]=DCEFunc_getNoise(signal2D,noiseFrames)
 %WORK IN PROGRESS
-%Function to calculate temporal noise level of time series
+%Function to calculate temporal noise level of time series (for QA use)
 %Calculated as std and mean/std following linear detrending of signal
 %INPUT:
 %signal2D: array of signals including baseline signal; each column represents a time series (e.g. voxel, ROI)
