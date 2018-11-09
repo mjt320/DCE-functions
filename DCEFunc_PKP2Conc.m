@@ -1,4 +1,4 @@
-function [Ct_mM,IRF]=DCEFunc_PKP2Conc(tRes_s,Cp_AIF_mM,PKP,model,opts)
+function [Ct_mM,IRF,Ce_mM]=DCEFunc_PKP2Conc(tRes_s,Cp_AIF_mM,PKP,model,opts)
 % Calculate tissue concentration curve based on pharmacokinetic parameters
 % for various models (additional models may be added on request). Useful for simulations.
 % OUTPUT:
@@ -37,6 +37,10 @@ end
 Ct_mM = conv(Cp_AIF_mM.',IRF,'full').';
 Ct_mM = Ct_mM(1:N); % remove extra entries so that Ct is same length as AIF, otherwise we will predict Ct (incorrectly) after acquisition has ended
 
+%% Calculate Ce using Sourbron 2011
+v = PKP.vP + PKP.vE;
+C_tiss = Ct_mM / v;
+Ce_mM = (C_tiss - (PKP.vP*Cp_AIF_mM))/PKP.vE;
 
 %% Functions to calculate IRF
     function IRF=PatlakIRF() % function to calculate discrete IRF by taking mean for each time point
