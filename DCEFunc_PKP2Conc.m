@@ -1,9 +1,9 @@
-function [Ct_mM,IRF]=DCEFunc_PKP2Conc(tRes_s,Cp_AIF_mM,PKP,model,opts)
-% Calculate tissue concentration curve based on pharmacokinetic parameters
-% for various models (additional models may be added on request). Useful for simulations.
+function [Ct_mM, IRF, C_cp_mM, C_e_mM] = DCEFunc_PKP2Conc_2(tRes_s,Cp_AIF_mM,PKP,model,opts)
 % OUTPUT:
-% Ct_mM: column vector giving tissue concentration in mM
-% IRF: impulse response function
+% Ct_mM: column vector giving overall tissue concentration in mM
+% IRF: Impulse Response Function
+% C_cp_mM: column vector giving local concentration in capillary plasma
+% C_e_mM: column vector giving local EES concentration
 % INPUT:
 % tRes_s = time resolution of data in seconds
 % Cp_AIF_mM = column vector giving AIF plasma concentration in mM
@@ -11,51 +11,76 @@ function [Ct_mM,IRF]=DCEFunc_PKP2Conc(tRes_s,Cp_AIF_mM,PKP,model,opts)
 % model = string to specify model:
 %   Patlak
 %   2CXM = two-compartment exchange model
-% opts = struct containing options (not presently used)
 
-N=size(Cp_AIF_mM,1);
+% create empty arrays
+N=size(Cp_AIF_mM,1); % size of arrays
+Ct_mM = nan(N,1); % tissue concentrations
+C_cp_mM = nan(N,1); % capillary concentrations
+C_e_mM = nan(N,1); % EES concentrations
+IRF =  nan(N,1); % Impulse Response Function
+h_cp=nan(1,N); % capillary propogators
+h_e=nan(1,N); % EES propogators
 
-
-%% Calculate discrete IRF for specified model
 switch model
-    case 'Patlak'
-        IRF=PatlakIRF();
+    %% Approach is to calculate the propagators for capillary plasma and the 
+    % EES as defined in Sourbron and Buckley (2012) Phys. Med. Biol.
+    % C_cp and C_e are then convolutions of these propagators with C_p_AIF
+    % Note that C_p_AIF is discrete and the propagators are continuous.
+    % Therefore the convolution is calculated exactly for each time step,
+    % then summed over all time steps.
+    
+    case 'Patlak' % calculates IRF for Patlak model
+        h_cp(1)=PKP.vP ; % h_cp for first time point
+        h_e(1)=(PKP.PS_perMin/2)*(tRes_s/60); % h_e for first time point
+        for iTime=2:N
+            h_cp(iTime)=0;
+            h_e(iTime)=PKP.PS_perMin * (tRes_s/60);
+        end
+        
     case '2CXM'
-        %% derive some parameters using notation of Sourbron (2011)
-        e=PKP.vE/(PKP.vP+PKP.vE);
-        E=PKP.PS_perMin/(PKP.PS_perMin+(1/100)*PKP.FP_mlPer100gPerMin);
-        tauP = ((E - E*e + e)/(2*E)) * ( 1 + sqrt(1-(4*E*e*(1-E)*(1-e))/((E-E*e+e)^2)) );
-        tauM = ((E - E*e + e)/(2*E)) * ( 1 - sqrt(1-(4*E*e*(1-E)*(1-e))/((E-E*e+e)^2)) );
-        KP = (1/100)*PKP.FP_mlPer100gPerMin/((PKP.vP+PKP.vE)*tauM); KM = (1/100)*PKP.FP_mlPer100gPerMin/((PKP.vP+PKP.vE)*tauP);
-        FPos=(1/100)*PKP.FP_mlPer100gPerMin*((tauP-1)/(tauP-tauM)); FNeg=-(1/100)*PKP.FP_mlPer100gPerMin*((tauM-1)/(tauP-tauM));
-        IRF=IRF2CXM();
+        % calculate constants
+        v = PKP.vE + PKP.vP;
+        T = v/((1/100)*PKP.FP_mlPer100gPerMin);
+        Tc = PKP.vP/((1/100)*PKP.FP_mlPer100gPerMin);
+        Te = PKP.vE/PKP.PS_perMin;
+        sig_p = ((T+Te) + sqrt((T + Te)^2 - (4*Tc*Te)))/(2*Tc*Te);
+        sig_n = ((T+Te) - sqrt((T + Te)^2 - (4*Tc*Te)))/(2*Tc*Te);
+        sig_rat = (sig_p*sig_n)/(sig_p - sig_n);
+        sig_p_rec = -1/sig_p;
+        sig_n_rec = -1/sig_n;
+        % calculate propogators for 2CXM
+        h_cp(1) = hcp_2CXMIntegral(0,(tRes_s/60)/2); % h_cp for first time point
+        h_e(1) = he_2CXMIntegral(0,(tRes_s/60)/2); % h_e for first time point
+        for iTime=2:N
+            h_cp(iTime) = hcp_2CXMIntegral( (iTime-1-0.5)*(tRes_s/60), (iTime-1+0.5)*(tRes_s/60) );
+            h_e(iTime) = he_2CXMIntegral( (iTime-1-0.5)*(tRes_s/60), (iTime-1+0.5)*(tRes_s/60) );
+        end
     otherwise
         error('Model not recognised.');
 end
 
-%% Calculate Ct by convolution of AIF with IRF
-Ct_mM = conv(Cp_AIF_mM.',IRF,'full').';
-Ct_mM = Ct_mM(1:N); % remove extra entries so that Ct is same length as AIF, otherwise we will predict Ct (incorrectly) after acquisition has ended
+%% Calculate C_cp and C_e by convolution of AIF with propogators
+C_cp_mM = conv(Cp_AIF_mM.',h_cp,'full').';
+C_e_mM = conv(Cp_AIF_mM.',h_e,'full').';
+C_cp_mM = C_cp_mM(1:N); % remove extra entries so that C_cp and C_e are same length as AIF
+C_e_mM = C_e_mM(1:N);
 
+%% calculate IRF
+IRF = (h_e*PKP.vE) + (h_cp*PKP.vP);
 
-%% Functions to calculate IRF
-    function IRF=PatlakIRF() % function to calculate discrete IRF by taking mean for each time point
-        IRF=nan(1,N);
-        IRF(1)=PKP.vP + (PKP.PS_perMin/2)*(tRes_s/60); % IRF at time zero
-        IRF(2:N)=PKP.PS_perMin * (tRes_s/60); % IRF at time zero+t_res, zero+2*t_res, ...
+%% Calculate C_t from C_cp and C_e
+Ct_mM = (PKP.vP*C_cp_mM) + (PKP.vE*C_e_mM);
+
+%% Functions to calculate exact integral of propogators over ranges for 2CXM
+    function prop_hcp_Int = hcp_2CXMIntegral(t1,t2)
+        prop_hcp_Int = (sig_rat*((sig_n_rec*(1-(Te*sig_n))*exp(-1*t2*sig_n))+(sig_p_rec*((Te*sig_p)-1)*exp(-1*t2*sig_p))))...
+           - (sig_rat*((sig_n_rec*(1-(Te*sig_n))*exp(-1*t1*sig_n))+(sig_p_rec*((Te*sig_p)-1)*exp(-1*t1*sig_p))));
     end
 
-    function IRF=IRF2CXM()
-        IRF=nan(1,N);
-        IRF(1)=IRF2CXMIntegral(0,(tRes_s/60)/2); % IRF at time zero
-        for iTime=2:N
-            IRF(iTime)=IRF2CXMIntegral( (iTime-1-0.5)*(tRes_s/60), (iTime-1+0.5)*(tRes_s/60) ); % IRF at time zero + t_res, ... (take integral of continuous IRF function between t-t_res/2 and t+t_res/2)
-        end
+    function prop_he_Int = he_2CXMIntegral(t1,t2)
+        prop_he_Int = (sig_rat*((sig_n_rec*exp(-1*t2*sig_n))-(sig_p_rec*exp(-1*t2*sig_p))))...
+            - (sig_rat*((sig_n_rec*exp(-1*t1*sig_n))-(sig_p_rec*exp(-1*t1*sig_p))));
     end
 
-%% Functions to calculate exact integral of IRF over any range for 2CXM model (needed to convert IRF to a discrete function)
-    function IRFInt=IRF2CXMIntegral(t1,t2)
-        IRFInt = -(FPos/KP)*(exp(-t2*KP)-exp(-t1*KP)) - (FNeg/KM)*(exp(-t2*KM)-exp(-t1*KM));
-    end
 
 end
