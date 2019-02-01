@@ -1,4 +1,4 @@
-function [Ct_mM, IRF, C_cp_mM, C_e_mM] = DCEFunc_PKP2Conc_2(tRes_s,Cp_AIF_mM,PKP,model,opts)
+function [Ct_mM, IRF, C_cp_mM, C_e_mM] = DCEFunc_PKP2Conc(tRes_s,Cp_AIF_mM,PKP,model,opts)
 % OUTPUT:
 % Ct_mM: column vector giving overall tissue concentration in mM
 % IRF: Impulse Response Function
@@ -30,11 +30,12 @@ switch model
     % then summed over all time steps.
     
     case 'Patlak' % calculates IRF for Patlak model
-        h_cp(1)=PKP.vP ; % h_cp for first time point
-        h_e(1)=(PKP.PS_perMin/2)*(tRes_s/60); % h_e for first time point
+        if ~isfield(PKP,'vE'); PKP.vE=1; end %set nominal value for vE so that general propogator approach works for Patlak model
+        h_cp(1)=1 ; % h_cp for first time point
+        h_e(1)=(PKP.PS_perMin/(2*PKP.vE))*(tRes_s/60); % h_e for first time point
         for iTime=2:N
             h_cp(iTime)=0;
-            h_e(iTime)=PKP.PS_perMin * (tRes_s/60);
+            h_e(iTime)=(PKP.PS_perMin/PKP.vE) * (tRes_s/60);
         end
         
     case '2CXM'
