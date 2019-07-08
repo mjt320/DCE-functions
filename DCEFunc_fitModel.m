@@ -22,6 +22,11 @@ function [PKP, CtModelFit_mM]=DCEFunc_fitModel(tRes_s,Ct_mM,Cp_AIF_mM,model,opts
 % opts = struct containing options:
 %   NIgnore = number of points to ignore in cost function. For Patlak,
 %       early data points may be excluded to reduce CBF effects
+%   PatlakFastRegMode = regression mode for multiple linear regression Patlak fitting:
+%       'linear' for standard regression,
+%       'robust' for robust regression
+
+if ~isfield(opts,'PatlakFastRegMode'); opts.PatlakFastRegMode='linear'; end %default to linear regression
 
 
 N=size(Ct_mM,2); %number of time series
@@ -88,7 +93,15 @@ switch model %process data using specified model/implementation
         end
         
         reg=[Cp_AIF_mM(opts.NIgnore+1:end,:) intCp_AIF_mM_min(opts.NIgnore+1:end,:)]; % put both regressors into a matrix
-        beta(:,:) = reg \ Ct_mM(opts.NIgnore+1:end,:); % regression to calculate coefficients
+        
+        switch opts.PatlakFastRegMode
+            case 'linear'
+                beta(:,:) = reg \ Ct_mM(opts.NIgnore+1:end,:); % regression to calculate coefficients
+            case 'robust'
+                for iSeries=1:N
+                    beta(:,iSeries)= robustfit(reg,Ct_mM(opts.NIgnore+1:end,iSeries),'huber',[],'off'); % robust regression to calculate coefficients
+                end
+        end
         
         PKP.vP(1,:)=beta(1,:);
         PKP.PS_perMin=beta(2,:);
