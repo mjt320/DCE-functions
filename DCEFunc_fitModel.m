@@ -23,7 +23,7 @@ function [PKP, CtModelFit_mM]=DCEFunc_fitModel(tRes_s,Ct_mM,Cp_AIF_mM,model,opts
 %   NIgnore = number of points to ignore in cost function. For Patlak,
 %       early data points may be excluded to reduce CBF effects
 %   PatlakFastRegMode = regression mode for multiple linear regression Patlak fitting:
-%       'linear' for standard regression,
+%       'linear' for standard regression (default),
 %       'robust' for robust regression
 
 if ~isfield(opts,'PatlakFastRegMode'); opts.PatlakFastRegMode='linear'; end %default to linear regression
