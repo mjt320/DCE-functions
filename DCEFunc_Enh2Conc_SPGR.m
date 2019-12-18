@@ -45,7 +45,7 @@ switch mode
         
         for iSeries=1:NSeries %loop through different time series (e.g. voxels or ROIs)
             
-            if isnan(T10_s(1,iSeries)); continue; end; %skip voxels without a T1 value
+            if isnan(T10_s(1,iSeries)) || T10_s(1,iSeries)<=0; continue; end %skip voxels without a valid T1 value
             
             predictedSignal_pre = DCEFunc_getSPGRSignal(S0,T10_s(1,iSeries),T2s0_s,TR_s,TE_s,FA_deg(1,iSeries)); %calculate pre-contrast signal
             
