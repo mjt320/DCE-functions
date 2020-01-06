@@ -10,6 +10,8 @@ function enhancementPct=DCEFunc_Conc2Enh_SPGR(conc_mM,T10_s,TR_s,TE_s,FA_deg,r1_
 % FA_deg: row vector of flip angles; each value corresponds to a time series
 % r1_permMperS, r2_permMperS: T1 and T2 relaxivity values. Ignores T2'
 % effects.
+%
+% Authors: MJT, JMB
 
 S0=1; % this value doesn't affect enhancement for SPGR
 T2s0_s = 1; % this value doesn't affect enhancement for SPGR
