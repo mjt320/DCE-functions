@@ -35,26 +35,23 @@ elseif isempty(varargin) == 0;
 end
 
 switch decay_type % Set alpha and beta values
-    case 'MSS2' % set values to match MSS2 data
+    case 'MSS2' % set values to match MSS2 data using AKH edit
         alpha=3.1671; beta=1.0165;
         alpha2=0.5628; beta2=0.0266;
-    case 'MSS3' % set values to match MSS3 data
+    case 'MSS3' % set values to match MSS3 data using AKH edit
         alpha=3.1671; beta=1.0165;
         alpha2=0.765; beta2=0.0325;
     case 'OG Parker' % set values to original Parker
-        alpha=1.050; beta=0.1685; 
+        alpha=0; beta=0;
+        alpha2=1.050; beta2=0.1685; 
+    case 'OG Parker-MSS3' % First pass similar to OG Parker but long-term decay to match MSS3/high-res AIF
+        alpha=0.246; beta=0.380;
+        alpha2=0.765; beta2=0.0325;
 end
-switch decay_type
-    case {'MSS2','MSS3'} % uses AKH modified Parker to match longer acquisition
-        Cb_mM=(A1/(sigma1*sqrt(2*pi)))*exp(-((t_min-T1).^2)/(2*sigma1^2)) + ... %calculate Cb
-            (A2/(sigma2*sqrt(2*pi)))*exp(-((t_min-T2).^2)/(2*sigma2^2)) + ...
-            (alpha*exp(-beta*t_min) + alpha2*exp(-beta2*t_min))./(1+exp(-s*(t_min-tau)));
-    case 'OG Parker' % use original Parker model equation
-        Cb_mM=(A1/(sigma1*sqrt(2*pi)))*exp(-((t_min-T1).^2)/(2*sigma1^2)) + ... %calculate Cb
-            (A2/(sigma2*sqrt(2*pi)))*exp(-((t_min-T2).^2)/(2*sigma2^2)) + ...
-            (alpha*exp(-beta*t_min)./(1+exp(-s*(t_min-tau))));
-end
-       
+Cb_mM=(A1/(sigma1*sqrt(2*pi)))*exp(-((t_min-T1).^2)/(2*sigma1^2)) + ... %calculate Cb
+    (A2/(sigma2*sqrt(2*pi)))*exp(-((t_min-T2).^2)/(2*sigma2^2)) + ...
+    (alpha*exp(-beta*t_min) + alpha2*exp(-beta2*t_min))./(1+exp(-s*(t_min-tau)));
+
 Cp_AIF_mM=Cb_mM/(1-Hct); %convert to Cp
 
 t_preContrast_s=fliplr(t_start_s-t_res_s/2:-t_res_s:0).'; %pre-injection time points (calculate backwards to zero, then reverse, so that time interval is constant)
