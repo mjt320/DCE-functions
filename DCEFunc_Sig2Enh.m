@@ -3,7 +3,7 @@ function enhancementPct=DCEFunc_Sig2Enh(signal,baselineScansIdx)
 %INPUT:
 %signal: array of DCE signals including pre-contrast values; each column
 %represents a different time series (e.g. voxel, ROI)
-%baselineScans: a row vector of indices corresponding to precontrast scans;
+%baselineScansIdx: a row vector of indices corresponding to precontrast scans;
 %the mean of these scans is used as the baseline when calculating signal
 %enhancement
 %OUTPUT:
