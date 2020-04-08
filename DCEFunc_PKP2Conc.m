@@ -1,9 +1,9 @@
-function [Ct_mM, IRF, C_cp_mM, C_e_mM] = DCEFunc_PKP2Conc(tRes_s,Cp_AIF_mM,PKP,model,opts)
+function [Ct_mM, IRF, c_cp_mM, c_e_mM] = DCEFunc_PKP2Conc(tRes_s,Cp_AIF_mM,PKP,model,opts)
 % OUTPUT:
 % Ct_mM: column vector giving overall tissue concentration in mM
 % IRF: Impulse Response Function
-% C_cp_mM: column vector giving local concentration in capillary plasma
-% C_e_mM: column vector giving local EES concentration
+% c_cp_mM: column vector giving local concentration in capillary plasma
+% c_e_mM: column vector giving local EES concentration
 % INPUT:
 % tRes_s = time resolution of data in seconds
 % Cp_AIF_mM = column vector giving AIF plasma concentration in mM
@@ -15,8 +15,8 @@ function [Ct_mM, IRF, C_cp_mM, C_e_mM] = DCEFunc_PKP2Conc(tRes_s,Cp_AIF_mM,PKP,m
 % create empty arrays
 N=size(Cp_AIF_mM,1); % size of arrays
 Ct_mM = nan(N,1); % tissue concentrations
-C_cp_mM = nan(N,1); % capillary concentrations
-C_e_mM = nan(N,1); % EES concentrations
+c_cp_mM = nan(N,1); % capillary concentrations
+c_e_mM = nan(N,1); % EES concentrations
 IRF =  nan(N,1); % Impulse Response Function
 h_cp=nan(1,N); % capillary propogators
 h_e=nan(1,N); % EES propogators
@@ -61,16 +61,16 @@ switch model
 end
 
 %% Calculate C_cp and C_e by convolution of AIF with propogators
-C_cp_mM = conv(Cp_AIF_mM.',h_cp,'full').';
-C_e_mM = conv(Cp_AIF_mM.',h_e,'full').';
-C_cp_mM = C_cp_mM(1:N); % remove extra entries so that C_cp and C_e are same length as AIF
-C_e_mM = C_e_mM(1:N);
+c_cp_mM = conv(Cp_AIF_mM.',h_cp,'full').';
+c_e_mM = conv(Cp_AIF_mM.',h_e,'full').';
+c_cp_mM = c_cp_mM(1:N); % remove extra entries so that C_cp and C_e are same length as AIF
+c_e_mM = c_e_mM(1:N);
 
 %% calculate IRF
 IRF = (h_e*PKP.vE) + (h_cp*PKP.vP);
 
 %% Calculate C_t from C_cp and C_e
-Ct_mM = (PKP.vP*C_cp_mM) + (PKP.vE*C_e_mM);
+Ct_mM = (PKP.vP*c_cp_mM) + (PKP.vE*c_e_mM);
 
 %% Functions to calculate exact integral of propogators over ranges for 2CXM
     function prop_hcp_Int = hcp_2CXMIntegral(t1,t2)
