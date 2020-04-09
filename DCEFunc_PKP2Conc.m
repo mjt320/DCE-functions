@@ -24,7 +24,7 @@ h_e=nan(1,N); % EES propogators
 switch model
     %% Approach is to calculate the propagators for capillary plasma and the 
     % EES as defined in Sourbron and Buckley (2012) Phys. Med. Biol.
-    % C_cp and C_e are then convolutions of these propagators with C_p_AIF
+    % c_cp and c_e are then convolutions of these propagators with C_p_AIF
     % Note that C_p_AIF is discrete and the propagators are continuous.
     % Therefore the convolution is calculated exactly for each time step,
     % then summed over all time steps.
@@ -60,16 +60,16 @@ switch model
         error('Model not recognised.');
 end
 
-%% Calculate C_cp and C_e by convolution of AIF with propogators
+%% Calculate c_cp and c_e by convolution of AIF with propogators
 c_cp_mM = conv(Cp_AIF_mM.',h_cp,'full').';
 c_e_mM = conv(Cp_AIF_mM.',h_e,'full').';
-c_cp_mM = c_cp_mM(1:N); % remove extra entries so that C_cp and C_e are same length as AIF
+c_cp_mM = c_cp_mM(1:N); % remove extra entries so that c_cp and c_e are same length as AIF
 c_e_mM = c_e_mM(1:N);
 
 %% calculate IRF
 IRF = (h_e*PKP.vE) + (h_cp*PKP.vP);
 
-%% Calculate C_t from C_cp and C_e
+%% Calculate C_t from c_cp and c_e
 Ct_mM = (PKP.vP*c_cp_mM) + (PKP.vE*c_e_mM);
 
 %% Functions to calculate exact integral of propogators over ranges for 2CXM
