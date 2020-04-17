@@ -99,6 +99,7 @@ switch model %process data using specified model/implementation
                 beta(:,:) = reg \ Ct_mM(opts.NIgnore+1:end,:); % regression to calculate coefficients
             case 'robust'
                 for iSeries=1:N
+                    if sum(isnan(Ct_mM(:,iSeries))) > 0; continue; end % skip concentration profiles containing one or more NaNs
                     beta(:,iSeries)= robustfit(reg,Ct_mM(opts.NIgnore+1:end,iSeries),'huber',[],'off'); % robust regression to calculate coefficients
                 end
         end
