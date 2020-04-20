@@ -13,13 +13,11 @@ function [Ct_mM, IRF, c_cp_mM, c_e_mM] = DCEFunc_PKP2Conc(tRes_s,Cp_AIF_mM,PKP,m
 %   2CXM = two-compartment exchange model
 
 % create empty arrays
+orig_shape = size(PKP.vP);
+
 N=size(Cp_AIF_mM,1); % size of arrays
-Ct_mM = nan(N,1); % tissue concentrations
-c_cp_mM = nan(N,1); % capillary concentrations
-c_e_mM = nan(N,1); % EES concentrations
-IRF =  nan(N,1); % Impulse Response Function
-h_cp=nan(1,N); % capillary propogators
-h_e=nan(1,N); % EES propogators
+h_cp=zeros([numel(PKP.vP), N]); % capillary propogators
+h_e=zeros([numel(PKP.vP), N]); % EES propogators
 
 switch model
     %% Approach is to calculate the propagators for capillary plasma and the 
@@ -31,11 +29,11 @@ switch model
     
     case 'Patlak' % calculates IRF for Patlak model
         if ~isfield(PKP,'vE'); PKP.vE=1; end %set nominal value for vE so that general propogator approach works for Patlak model
-        h_cp(1)=1 ; % h_cp for first time point
-        h_e(1)=(PKP.PS_perMin/(2*PKP.vE))*(tRes_s/60); % h_e for first time point
+        h_cp(:, 1)=1 ; % h_cp for first time point
+        h_e(:, 1)=(PKP.PS_perMin./(2*PKP.vE))*(tRes_s/60); % h_e for first time point
         for iTime=2:N
-            h_cp(iTime)=0;
-            h_e(iTime)=(PKP.PS_perMin/PKP.vE) * (tRes_s/60);
+            h_cp(:, iTime)=0;
+            h_e(:, iTime)=(PKP.PS_perMin./PKP.vE) * (tRes_s/60);
         end
         
     case '2CXM'
@@ -61,16 +59,22 @@ switch model
 end
 
 %% Calculate c_cp and c_e by convolution of AIF with propogators
-c_cp_mM = conv(Cp_AIF_mM.',h_cp,'full').';
-c_e_mM = conv(Cp_AIF_mM.',h_e,'full').';
-c_cp_mM = c_cp_mM(1:N); % remove extra entries so that c_cp and c_e are same length as AIF
-c_e_mM = c_e_mM(1:N);
+c_cp_mM = conv2(1, Cp_AIF_mM, h_cp, 'full');
+c_e_mM = conv2(1, Cp_AIF_mM, h_e, 'full');
+c_cp_mM = c_cp_mM(:, 1:N); % remove extra entries so that c_cp and c_e are same length as AIF
+c_e_mM = c_e_mM(:, 1:N);
 
 %% calculate IRF
-IRF = (h_e*PKP.vE) + (h_cp*PKP.vP);
+IRF = (h_e.*PKP.vE) + (h_cp.*PKP.vP);
 
 %% Calculate C_t from c_cp and c_e
-Ct_mM = (PKP.vP*c_cp_mM) + (PKP.vE*c_e_mM);
+Ct_mM = (PKP.vP.*c_cp_mM) + (PKP.vE.*c_e_mM);
+
+c_cp_mM = reshape(c_cp_mM, [orig_shape, N]);
+c_e_mM = reshape(c_e_mM, [orig_shape, N]);
+
+IRF = reshape(IRF, [orig_shape, N]);
+Ct_mM = reshape(Ct_mM, [orig_shape, N]);
 
 %% Functions to calculate exact integral of propogators over ranges for 2CXM
     function prop_hcp_Int = hcp_2CXMIntegral(t1,t2)
