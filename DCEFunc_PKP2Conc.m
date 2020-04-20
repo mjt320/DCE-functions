@@ -13,7 +13,7 @@ function [Ct_mM, IRF, c_cp_mM, c_e_mM] = DCEFunc_PKP2Conc(tRes_s,Cp_AIF_mM,PKP,m
 %   Patlak
 %   2CXM = two-compartment exchange model
 %
-% Authors: MJT, JMB
+% Authors: MJT, JMB, CM
 
 NFrames=size(Cp_AIF_mM,1); % number of time frames
 NSeries=size(PKP.vP,2); % number of time series
@@ -38,8 +38,8 @@ switch model
         if ~isfield(PKP,'vE'); PKP.vE=1*ones(1,NSeries); end %set nominal value for vE so that general propogator approach works for Patlak model
         h_cp(1,:)=1 ; % h_cp for first time point
         h_e(1,:)=(PKP.PS_perMin./(2*PKP.vE))*(tRes_s/60); % h_e for first time point
-        h_cp(2:NFrames,:)=0;
-        h_e(2:NFrames,:)=(repmat(PKP.PS_perMin,[NFrames-1,1])./repmat(PKP.vE,[NFrames-1,1])) * (tRes_s/60);
+        h_cp(2:NFrames,:)=0; % h_cp for subsequent time points
+        h_e(2:NFrames,:)=(repmat(PKP.PS_perMin,[NFrames-1,1])./repmat(PKP.vE,[NFrames-1,1])) * (tRes_s/60); % h_e for subsequent time points
         
     case '2CXM'
         % calculate constants
@@ -55,10 +55,10 @@ switch model
         % calculate propogators for 2CXM
         h_cp(1,:) = hcp_2CXMIntegral(0,(tRes_s/60)/2); % h_cp for first time point
         h_e(1,:) = he_2CXMIntegral(0,(tRes_s/60)/2); % h_e for first time point
-        for iTime=2:NFrames
-            h_cp(iTime,:) = hcp_2CXMIntegral( (iTime-1-0.5)*(tRes_s/60), (iTime-1+0.5)*(tRes_s/60) );
-            h_e(iTime,:) = he_2CXMIntegral( (iTime-1-0.5)*(tRes_s/60), (iTime-1+0.5)*(tRes_s/60) );
-        end
+        iTimes=(2:NFrames).'; % calculate h_cp and h_e for all subsequent time points
+        h_cp(iTimes,:) = hcp_2CXMIntegral( (iTimes-1-0.5)*(tRes_s/60), (iTimes-1+0.5)*(tRes_s/60) );
+        h_e(iTimes,:) = he_2CXMIntegral( (iTimes-1-0.5)*(tRes_s/60), (iTimes-1+0.5)*(tRes_s/60) );
+
     otherwise
         error('Model not recognised.');
 end
@@ -75,7 +75,7 @@ IRF = (h_e.*repmat(PKP.vE,[NFrames,1])) + (h_cp.*repmat(PKP.vP,[NFrames,1]));
 %% Calculate C_t from c_cp and c_e
 Ct_mM = (repmat(PKP.vP,[NFrames,1]).*c_cp_mM) + (repmat(PKP.vE,[NFrames,1]).*c_e_mM);
 
-%% Functions to calculate exact integral of propogators over ranges for 2CXM
+%% Functions to calculate exact integrals over propogators for 2CXM
     function prop_hcp_Int = hcp_2CXMIntegral(t1,t2)
         prop_hcp_Int = (sig_rat.*((sig_n_rec.*(1-(Te.*sig_n)).*exp(-1*t2*sig_n))+(sig_p_rec.*((Te.*sig_p)-1).*exp(-1*t2*sig_p))))...
             - (sig_rat.*((sig_n_rec.*(1-(Te.*sig_n)).*exp(-1*t1*sig_n))+(sig_p_rec.*((Te.*sig_p)-1).*exp(-1*t1*sig_p))));
