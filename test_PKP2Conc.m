@@ -1,13 +1,13 @@
-clear
+clc;clear
 
-NSeries=5;
+NSeries=500;
 
 tRes_s=2.3;
 Cp_AIF_mM=[1:10].' + rand(10,1);
-vPList=rand(1,NSeries);
-PSList=rand(1,NSeries);
-vEList=rand(1,NSeries);
-FPList=10*rand(1,NSeries);
+vPList=1*rand(1,NSeries);
+PSList=1e-2*rand(1,NSeries);
+vEList=1*rand(1,NSeries);
+FPList=50*rand(1,NSeries);
 model='2CXM';
 opts=[];
 
@@ -32,12 +32,12 @@ PKP2.vE=vEList;
 PKP2.FP_mlPer100gPerMin=FPList;
 [Ct_mM_2, IRF_2, c_cp_mM_2, c_ce_mM_2] = DCEFunc_PKP2Conc(tRes_s,Cp_AIF_mM,PKP2,model,opts);
 
-[Ct_mM Ct_mM_2]
-[IRF IRF_2]
-[c_cp_mM c_cp_mM_2]
-[c_ce_mM c_ce_mM_2]
+[Ct_mM Ct_mM_2];
+[IRF IRF_2];
+[c_cp_mM c_cp_mM_2];
+[c_ce_mM c_ce_mM_2];
 
-[Ct_mM-Ct_mM_2]
-[IRF-IRF_2]
-[c_cp_mM-c_cp_mM_2]
-[c_ce_mM-c_ce_mM_2]
+max(abs([Ct_mM(:)-Ct_mM_2(:)]))
+max(abs([IRF(:)-IRF_2(:)]))
+max(abs([c_cp_mM(:)-c_cp_mM_2(:)]))
+max(abs([c_ce_mM(:)-c_ce_mM_2(:)]))
