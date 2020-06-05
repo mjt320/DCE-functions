@@ -13,11 +13,15 @@ function [PKP, CtModelFit_mM]=DCEFunc_fitModel(tRes_s,Ct_mM,Cp_AIF_mM,model,opts
 % Ct_mM: array of tissue concentrations in mM; each column corresponds to a
 % time series
 % Cp_AIF_mM = column vector giving AIF plasma (not blood!) concentration in mM
+% if AIF is different for each time series, i.e. an array, then model must be
+% set to PatlakFastMultiAIF. This is usually only needed for simulations.
 % model = string to specify model:
 %   'Patlak': non-linear implementation of Patlak.
 %   'PatlakLinear': classic linear Patlak plot approach. Can lead to
 %       unstable results for low values of Cp
 %   'PatlakFast': multiple linear regression implementation of Patlak model
+%       (recommended)
+%   'PatlakFastMultiAIF': multiple linear regression implementation of Patlak model
 %       (recommended)
 % opts = struct containing options:
 %   NIgnore = number of points to ignore in cost function. For Patlak,
@@ -28,6 +32,9 @@ function [PKP, CtModelFit_mM]=DCEFunc_fitModel(tRes_s,Ct_mM,Cp_AIF_mM,model,opts
 
 if ~isfield(opts,'PatlakFastRegMode'); opts.PatlakFastRegMode='linear'; end %default to linear regression
 
+if size(Cp_AIF_mM,2)~=1 && ~strcmp(opts.model,'PatlakFastMultiAIF')
+    error('For calls with multiple AIFs use opts.model=PatlakFastMultiAIF');
+end
 
 N=size(Ct_mM,2); %number of time series
 NTime=size(Ct_mM,1); %number of time points
@@ -89,10 +96,10 @@ switch model %process data using specified model/implementation
         beta=nan(2,N);
         
         for iFrame=1:NTime %calculate Cp integral to use as regressor
-            intCp_AIF_mM_min(iFrame,1)=(0.5*Cp_AIF_mM(iFrame) + sum(Cp_AIF_mM(1:iFrame-1,1),1)) * (tRes_s/60);
+            intCp_AIF_mM_min(iFrame,1)=(0.5*Cp_AIF_mM(iFrame,1) + sum(Cp_AIF_mM(1:iFrame-1,1),1)) * (tRes_s/60);
         end
         
-        reg=[Cp_AIF_mM(opts.NIgnore+1:end,:) intCp_AIF_mM_min(opts.NIgnore+1:end,:)]; % put both regressors into a matrix
+        reg=[Cp_AIF_mM(opts.NIgnore+1:end,1) intCp_AIF_mM_min(opts.NIgnore+1:end,1)]; % put both regressors into a matrix
         
         switch opts.PatlakFastRegMode
             case 'linear'
@@ -105,9 +112,39 @@ switch model %process data using specified model/implementation
         end
         
         PKP.vP(1,:)=beta(1,:);
-        PKP.PS_perMin=beta(2,:);
+        PKP.PS_perMin(1,:)=beta(2,:);
         
-        CtModelFit_mM = [ nan(opts.NIgnore,N) ; reg*beta ]; % calculate best fit concentration
+        CtModelFit_mM(:,:) = [ nan(opts.NIgnore,N) ; reg*beta ]; % calculate best fit concentration
+        
+    case 'PatlakFastMultiAIF' %multiple linear regression implementation (recommended)
+        %linear Patlak using Cp and Integral Cp as regressors - vP and K are the coefficients; uses matrix divide for speed
+        
+        PKP.vP=nan(1,N);
+        PKP.PS_perMin=nan(1,N);
+        intCp_AIF_mM_min=nan(NTime,1);
+        beta=nan(2,N);
+        
+        for iFrame=1:NTime %calculate Cp integral to use as regressor
+            intCp_AIF_mM_min(iFrame,:)=(0.5*Cp_AIF_mM(iFrame,:) + sum(Cp_AIF_mM(1:iFrame-1,:),1)) * (tRes_s/60);
+        end
+        
+        for n=1:N
+            reg=[Cp_AIF_mM(opts.NIgnore+1:end,n) intCp_AIF_mM_min(opts.NIgnore+1:end,n)]; % put both regressors into a matrix
+            
+            switch opts.PatlakFastRegMode
+                case 'linear'
+                    beta(:,n) = reg \ Ct_mM(opts.NIgnore+1:end,n); % regression to calculate coefficients
+                case 'robust'
+                    if sum(isnan(Ct_mM(:,n))) > 0; continue; end % skip concentration profiles containing one or more NaNs
+                    beta(:,n)= robustfit(reg,Ct_mM(opts.NIgnore+1:end,n),'huber',[],'off'); % robust regression to calculate coefficients
+            end
+            
+            PKP.vP(1,n)=beta(1,n);
+            PKP.PS_perMin(1,n)=beta(2,n);
+            
+            CtModelFit_mM(:,n) = [ nan(opts.NIgnore,n) ; reg*beta(:,n) ]; % calculate best fit concentration
+        end
+        
         
     case 'PatlakFastExtra' % EXPERIMENTAL!
         %permits additional non-Patlak regressors in opts.extraRegs
