@@ -72,7 +72,11 @@ switch mode
         conc_mM(:,:) = -log((exp(R10*TR_s).*(enhancementPct - 100*cos(FA) - enhancementPct.*exp(R10*TR_s) + 100))./(100*exp(R10*TR_s) + enhancementPct.*cos(FA) - 100*exp(R10*TR_s).*cos(FA) - enhancementPct.*exp(R10*TR_s).*cos(FA)))/(TR_s*r1_permMperS);
         %conc_mM(imag(conc_mM)~=0 | isinf(conc_mM) | conc_mM<-0.1 | conc_mM>8 ) = nan; %constrain in same way as numeric version
         conc_mM(imag(conc_mM)~=0 | isinf(conc_mM)) = nan; %no constraint
-    
+                
+        singularity_enh_1 = 100*((cos(FA)-1)/(1-exp(TR_s/T10_s))); %first positive singularity in exp conditions
+        %singularity_enh_2 = 100*(exp(TR_s/T10_s)/cos(FA))*((cos(FA)-1)/(1-exp(TR_s/T10_s))); %second positive singularity in exp conditions
+        conc_mM(enhancementPct>=singularity_enh_1)=nan; %remove values past singularity
+        
     otherwise
         error('Mode not recognised.');
 end
