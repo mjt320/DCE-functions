@@ -99,7 +99,15 @@ switch model %process data using specified model/implementation
             intCp_AIF_mM_min(iFrame,1)=(0.5*Cp_AIF_mM(iFrame,1) + sum(Cp_AIF_mM(1:iFrame-1,1),1)) * (tRes_s/60);
         end
         
-        reg=[Cp_AIF_mM(opts.NIgnore+1:end,1) intCp_AIF_mM_min(opts.NIgnore+1:end,1)]; % put both regressors into a matrix
+        reg=[Cp_AIF_mM intCp_AIF_mM_min]; % put both regressors into a matrix
+        
+        if length(opts.VolIgnore) >= 1 % check if VolIgnore exists  
+            reg([opts.VolIgnore],:)=[];
+            Ct_mM([opts.VolIgnore],:)=[];
+            CtModelFit_mM([opts.VolIgnore],:)=[];
+        end
+        
+        reg=reg(opts.NIgnore+1:end,:); % put both regressors into a matrix
         
         switch opts.PatlakFastRegMode
             case 'linear'
