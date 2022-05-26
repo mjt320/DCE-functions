@@ -38,8 +38,13 @@ end
 
 N=size(Ct_mM,2); %number of time series
 NTime=size(Ct_mM,1); %number of time points
-
 CtModelFit_mM=nan(NTime,N);
+
+% Array to specify which timepoints to exclude from fitting
+IgnoreArray = ones(NTime,1);
+IgnoreArray(opts.VolIgnore,:)=0;
+IgnoreArray(1:opts.NIgnore,:)=0;
+IgnoreRows = find(ismember(IgnoreArray,0));
 
 switch model %process data using specified model/implementation
     case 'Patlak' %non-linear implementation
@@ -101,29 +106,32 @@ switch model %process data using specified model/implementation
         
         reg=[Cp_AIF_mM intCp_AIF_mM_min]; % put both regressors into a matrix
         
-        if length(opts.VolIgnore) >= 1 % check if VolIgnore exists  
-            reg([opts.VolIgnore],:)=[];
-            Ct_mM([opts.VolIgnore],:)=[];
-            CtModelFit_mM([opts.VolIgnore],:)=[];
-        end
-        
-        reg=reg(opts.NIgnore+1:end,:); % put both regressors into a matrix
-        
+        % Ignore volumes if needed
+        reg([IgnoreRows],:)=[];
+        Ct_mM([IgnoreRows],:)=[];
+        CtModelFit_mM([IgnoreRows],:)=[];
+       
         switch opts.PatlakFastRegMode
             case 'linear'
-                beta(:,:) = reg \ Ct_mM(opts.NIgnore+1:end,:); % regression to calculate coefficients
+                beta(:,:) = reg \ Ct_mM; % regression to calculate coefficients
             case 'robust'
                 for iSeries=1:N
                     if sum(isnan(Ct_mM(:,iSeries))) > 0; continue; end % skip concentration profiles containing one or more NaNs
-                    beta(:,iSeries)= robustfit(reg,Ct_mM(opts.NIgnore+1:end,iSeries),'huber',[],'off'); % robust regression to calculate coefficients
+                    beta(:,iSeries)= robustfit(reg,Ct_mM(:,iSeries),'huber',[],'off'); % robust regression to calculate coefficients
                 end
         end
         
         PKP.vP(1,:)=beta(1,:);
         PKP.PS_perMin(1,:)=beta(2,:);
         
-        CtModelFit_mM(:,:) = [ nan(opts.NIgnore,N) ; reg*beta ]; % calculate best fit concentration
-        
+        CtModelFit_mM = [reg*beta]; % calculate best fit concentration
+        % Put NaNs back into CtModelFit_mM for excluded rows (so ROIAnalysis can plot later)
+        CtModelFit_mM = [NaN(opts.NIgnore,size(CtModelFit_mM,2)) ; CtModelFit_mM];
+        if length(opts.VolIgnore) >= 1
+            for v= 1:length(opts.VolIgnore)
+                CtModelFit_mM = [CtModelFit_mM(1:opts.VolIgnore(v)-1,:); NaN(1,size(CtModelFit_mM,2)) ; CtModelFit_mM(opts.VolIgnore(v):end,:)];
+            end
+        end
     case 'PatlakFastMultiAIF' %multiple linear regression implementation (recommended)
         %linear Patlak using Cp and Integral Cp as regressors - vP and K are the coefficients; uses matrix divide for speed
         
@@ -150,7 +158,8 @@ switch model %process data using specified model/implementation
             PKP.vP(1,n)=beta(1,n);
             PKP.PS_perMin(1,n)=beta(2,n);
             
-            CtModelFit_mM(:,n) = [ nan(opts.NIgnore,n) ; reg*beta(:,n) ]; % calculate best fit concentration
+            CtModelFit_mM(:,n) = [ nan(opts.NIgnore,n) ;
+                reg*beta(:,n) ]; % calculate best fit concentration
         end
         
         
